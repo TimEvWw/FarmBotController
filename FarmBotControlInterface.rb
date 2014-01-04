@@ -6,10 +6,14 @@ class FarmBotControlInterfaceAbstract
 		raise 'abstract class cannot be instantiated'
 	end
   
-	def moveTo( X, Y, Z )
+	def moveRelative( xAmount, yAmount, zAmount)
 		raise 'function not implemented'
 	end
 	
+	def moveRelative( xCoord, xHome, yCoord, yHome, zCoord, zHomeAmount)
+		raise 'function not implemented'
+	end
+
 	def moveHome
 		raise 'function not implemented'
 	end

@@ -1,45 +1,57 @@
-require 'FarmBotControlInterface'
+require 'firmata'
+require './FarmBotControlInterface.rb'
 
-class FarmBotControlInterface < FarmBotControlInterfaceAbstract
+class FarmBotControlInterface # < FarmBotControlInterfaceAbstract
 
-	@pos_X = 0.0
-	@pos_Y = 0.0
-	@pos_Z = 0.0
-	
-	# should come from configuration:
-	@steps_per_unit_X = 100 # steps per milimeter for example
-	@steps_per_unit_Y = 100
-	@steps_per_unit_Z = 100
-		
-	@board_device = "/dev/ttyACM0"
-
-	@pin_step_X = 54
-	@pin_dire_X = 55
-	@pin_enbl_X = 38
-	
 	def initialize
-		@board = Firmata::Board.new board_device
+		@posX = 0.0
+		@posY = 0.0
+		@posZ = 0.0
+		
+		# should come from configuration:
+		@stepsPerUnit_X = 10 # steps per milimeter for example
+		@stepsPerUnit_Y = 10
+		@stepsPerUnit_Z = 10
+			
+		@boardDevice = "/dev/ttyACM0"
+
+		@pinStepX = 54
+		@pinDireX = 55
+		@pinEnblX = 38
+		
+		@board = Firmata::Board.new @boardDevice
+		@board.connect
+		@board.set_pin_mode(pinEnblX, Firmata::Board::OUTPUT)
+		@board.set_pin_mode(pinDireX, Firmata::Board::OUTPUT)
+		@board.set_pin_mode(pinStepX, Firmata::Board::OUTPUT)
 	end
 
-	def moveTo( X, Y, Z )
+	def moveRelative( xAmount, yAmount, zAmount)
 		
-			@board.digital_write(pin_enbl_X, 0)
-				
-			if (X < pos_X)
-				@board.digital_write(pin_dire_X, 1)
-			else
-				@board.digital_write(pin_dire_X, 0)
-
-			while (X - pos_X).abs < 1/steps_per_unit_X
-				@board.digital_write(pin_step_X, 1)
-				sleep 0.001
-				@board.digital_write(pin_step_X, 0)
-				sleep 0.001
-			end
-			
-			@board.digital_write(pin_enbl_X, 1)
+		puts '**moveRelative**'
+		puts "xAmount #{xAmount}"
+	
+		@board.digital_write(pinEnblX, Firmata::Board::HIGH)
+	
+		if xAmount < 0
+			@board.digital_write(pinDireX, Firmata::Board::HIGH)
 		end
 	
-	end
-	
+		if xAmount > 0
+			@board.digital_write(pinDireX, Firmata::Board::LOW)
+		end
+
+		for i in 1..xAmount * stepsPerUnit
+			@board.digital_write(pinStepX, Firmata::Board::HIGH)
+			sleep 0.001
+			@board.digital_write(pinStepX, Firmata::Board::LOW)
+			sleep 0.001
+			posX += 1/stepsPerUnit
+		end
+		
+		@board.digital_write(pinEnblX, Firmata::Board::LOW)
+			
+		#while (X - pos_X).abs < 1/steps_per_unit_X
+					
+	end	
 end
