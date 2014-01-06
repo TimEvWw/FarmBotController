@@ -5,6 +5,7 @@
 
 require "./FarmBotControlInterfaceFirmataRamps14.rb"
 require './FarmBotCommand.rb'
+require './filehandler.rb'
 
 # This module ties the different components for the FarmBot together
 # It reads the next action from the database, executes it and reports back
@@ -24,13 +25,17 @@ class FarmBotControl
 			command.lines.each do |command_line|
 				case command_line.action.upcase
 					when "MOVE ABSOLUTE"
-						puts "move absolute"
+						$bot_hardware.moveAbsolute(command_line.xCoord, command_line.yCoord, command_line.zCoord)
 					when "MOVE RELATIVE"
 						$bot_hardware.moveRelative(command_line.xCoord, command_line.yCoord, command_line.zCoord)
-					when "MOVE HOME"
-						puts "move home"
+					when "HOME X"
+						$bot_hardware.moveHomeX
+					when "HOME Y"
+						$bot_hardware.moveHomeY
+					when "HOME Z"
+						$bot_hardware.moveHomeZ
 					when "SET SPEED"
-						puts "set speed"
+						$bot_hardware.setSpeed(command_line.speed)
 					when "SHUTDOWN"
 						puts "shutdown"
 						$shutdown = 1
@@ -77,8 +82,8 @@ while $shutdown == 0 do
 	puts '[FarmBot Controller Menu]'
 	puts ''
 	puts 'p - stop'
-	puts 'o - status'
-	puts 't - test'
+#	puts 'o - status'
+	puts 't - execute test file'
 	puts ''
 	puts "move size = #{$move_size}"
 	puts ''
@@ -108,6 +113,14 @@ while $shutdown == 0 do
 			print 'Enter new step size > '
 			move_size_temp = gets
 			$move_size = move_size_temp.to_i if move_size_temp.to_i > 0
+		when "T" # Execute test file
+		
+			# read the file
+			new_command = FarmBotTestFileHandler.readCommandFile
+			new_command.commandid = 0
+			
+			# put the command into the queue for execution
+			$command_queue << new_command
 		when "E" # Move to home
 		
 			# create the command

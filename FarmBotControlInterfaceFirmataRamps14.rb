@@ -79,58 +79,153 @@ class FarmBotControlInterface # < FarmBotControlInterfaceAbstract
 
 	end
 
+	# move the bot to the home position
+
+	def moveHomeX
+		moveHome(@pin_enb_x, @pin_dir_x, @pin_stp_x, @pin_min_x)
+		@pos_x = 0
+	end
+
+	def moveHomeY
+		moveHome(@pin_enb_y, @pin_dir_y, @pin_stp_y, @pin_min_y)
+		@pos_y = 0
+	end
+
+	def moveHomeZ
+		moveHome(@pin_enb_z, @pin_dir_z, @pin_stp_z, @pin_min_z)
+		@pos_z = 0
+	end
+
+	def setSpeed( speed )
+		
+	end
+
+	def moveHome(pin_enb, pin_dir, pin_stp, pin_min)
+
+		# set the direction and enable
+
+		@board.digital_write(pin_enb, Firmata::Board::LOW)
+		@board.digital_write(pin_dir, Firmata::Board::LOW)
+
+		start = Time.now
+		home  = 0
+
+		# keep setting pulses at the step pin until the end stop is reached of a time is reached
+
+		while home == 0 do		
+
+			@board.read_and_process
+			span = Time.now - start
+			
+			if span > 30
+				home = 1
+				puts 'move home timed out'
+			end
+
+			if @board.pins[pin_min].value == 1
+				home = 1
+				puts 'end stop reached'
+			end
+
+			if home == 0
+				@board.digital_write(pin_stp, Firmata::Board::HIGH)
+				sleep 0.001
+				@board.digital_write(pin_stp, Firmata::Board::LOW)
+				sleep 0.001				
+			end
+		end
+
+		# disavle motor driver
+		@board.digital_write(pin_dir, Firmata::Board::LOW)
+
+	end
+
+
+	# move the bot to the give coordinates
+
+	def moveAbsolute( coord_x, coord_y, coord_z)
+
+		puts '**move absolute **'
+
+		# calculate the number of steps for the motors to do
+
+		steps_x = (coord_x - @pos_x) * @steps_per_unit_x
+		steps_y = (coord_y - @pos_y) * @steps_per_unit_y
+		steps_z = (coord_z - @pos_z) * @steps_per_unit_z
+
+		puts "x steps #{steps_x}"
+		puts "y steps #{steps_y}"
+		puts "z steps #{steps_z}"
+
+		moveSteps( steps_x, steps_y, steps_z )
+
+	end
 
 	# move the bot a number of units starting from the current position
 
 	def moveRelative( amount_x, amount_y, amount_z)
-		
 
-		puts '**move Relative **'
-		puts "x #{amount_x}"
-		puts "y #{amount_y}"
-		puts "z #{amount_z}"
+
+		puts '**move relative **'
+
+		# calculate the number of steps for the motors to do
+
+		steps_x = amount_x * @steps_per_unit_x
+		steps_y = amount_y * @steps_per_unit_y
+		steps_z = amount_z * @steps_per_unit_z
+
+		puts "x steps #{steps_x}"
+		puts "y steps #{steps_y}"
+		puts "z steps #{steps_z}"
+
+		moveSteps( steps_x, steps_y, steps_z )
+
+	end
+
+	def moveSteps( steps_x, steps_y, steps_z)
+		
+		puts '**move steps **'
+		puts "x #{steps_x}"
+		puts "y #{steps_y}"
+		puts "z #{steps_z}"
 		
 		# set the direction and the enable bit for the motor drivers
 
-		if amount_x < 0
+		if steps_x < 0
 			@board.digital_write(@pin_enb_x, Firmata::Board::LOW)
 			@board.digital_write(@pin_dir_x, Firmata::Board::LOW)
 		end
 	
-		if amount_x > 0
+		if steps_x > 0
 			@board.digital_write(@pin_enb_x, Firmata::Board::LOW)
 			@board.digital_write(@pin_dir_x, Firmata::Board::HIGH)
 		end
 
-		if amount_y < 0
+		if steps_y < 0
 			@board.digital_write(@pin_enb_y, Firmata::Board::LOW)
 			@board.digital_write(@pin_dir_y, Firmata::Board::LOW)
 		end
 	
-		if amount_y > 0
+		if steps_y > 0
 			@board.digital_write(@pin_enb_y, Firmata::Board::LOW)
 			@board.digital_write(@pin_dir_y, Firmata::Board::HIGH)
 		end
 
-		if amount_z < 0
+		if steps_z < 0
 			@board.digital_write(@pin_enb_z, Firmata::Board::LOW)
 			@board.digital_write(@pin_dir_z, Firmata::Board::LOW)
 		end
 	
-		if amount_z > 0
+		if steps_z > 0
 			@board.digital_write(@pin_enb_z, Firmata::Board::LOW)
 			@board.digital_write(@pin_dir_z, Firmata::Board::HIGH)
 		end
 
-		# calculate the number of steps for the motors to do
+		# make the steps positive numbers 
 
-		nr_steps_x = amount_x.abs * @steps_per_unit_x
-		nr_steps_y = amount_y.abs * @steps_per_unit_y
-		nr_steps_z = amount_z.abs * @steps_per_unit_z
-
-		puts "x steps #{nr_steps_x}"
-		puts "y steps #{nr_steps_y}"
-		puts "z steps #{nr_steps_z}"
+		nr_steps_x = steps_x.abs
+		nr_steps_y = steps_y.abs
+		nr_steps_z = steps_z.abs
 
 		# loop until all steps are done
 
