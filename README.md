@@ -31,11 +31,11 @@ use "git clone" to copy the code to the RPi
 Usage
 =====
 
-Use "ruby menu.rb" to start the software. A menu will appear. Type the command needed and press enter.
+Use "ruby menu.rb" to start the software. A menu will appear. Type the command needed and press enter. It is also possible to add a list of commands to the file 'testcommands.csv' and use the menu to execute the file.
 
 Still to do
 ===========
 
-* A lot of the settings for pins, sleep times, timeouts and motor inversions have to be moved to configuration.\
+* A lot of the settings for pins, sleep times, timeouts and motor inversions have to be moved to configuration.
 * Check if it works with the nema 17 motor from OpenBuilds
 
