@@ -15,14 +15,23 @@ class Control
 
 	def initialize	
 		@inactiveCounter 	= 0
+		@new_command		= nil
 	end
 	
+	def setCommand( cmd )
+		@new_command = cmd
+	end
+
 	def runCycle
 
-		if $command_queue.empty? == false
+		#if $command_queue.empty? == false
+		if @new_command != nil
 
-			command = $command_queue.pop
-			command.lines.each do |command_line|
+			#command = $command_queue.pop
+			#command = @new_command
+			#@new_command = nil
+			@new_command.lines.each do |command_line|
+			#command.lines.each do |command_line|
 				case command_line.action.upcase
 					when "MOVE ABSOLUTE"
 						$bot_hardware.moveAbsolute(command_line.xCoord, command_line.yCoord, command_line.zCoord)
@@ -46,6 +55,8 @@ class Control
 		else
 			sleep 0.1
 		end
+
+		@new_command = nil
 		
 	end
 end

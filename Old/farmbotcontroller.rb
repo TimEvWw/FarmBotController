@@ -1,21 +1,69 @@
-# FarmBot Controller Menu
+# FarmBot Controller
 
-require './lib/controller.rb'
-require './lib/filehandler.rb'
-require "./lib/hardware/ramps.rb"
+#require "Rubygems"
+#require "FarmBotDbAccess"
 
-$bot_control		= Control.new
-$bot_hardware 		= HardwareInterface.new
+require "./FarmBotControlInterfaceFirmataRamps14.rb"
+require './FarmBotCommand.rb'
+require './filehandler.rb'
+
+# This module ties the different components for the FarmBot together
+# It reads the next action from the database, executes it and reports back
+# and it will initiate the synchronization with the web systems
+
+class FarmBotControl
+
+	def initialize	
+		@inactiveCounter 	= 0
+	end
+	
+	def runCycle
+
+		if $command_queue.empty? == false
+
+			command = $command_queue.pop
+			command.lines.each do |command_line|
+				case command_line.action.upcase
+					when "MOVE ABSOLUTE"
+						$bot_hardware.moveAbsolute(command_line.xCoord, command_line.yCoord, command_line.zCoord)
+					when "MOVE RELATIVE"
+						$bot_hardware.moveRelative(command_line.xCoord, command_line.yCoord, command_line.zCoord)
+					when "HOME X"
+						$bot_hardware.moveHomeX
+					when "HOME Y"
+						$bot_hardware.moveHomeY
+					when "HOME Z"
+						$bot_hardware.moveHomeZ
+					when "SET SPEED"
+						$bot_hardware.setSpeed(command_line.speed)
+					when "SHUTDOWN"
+						puts "shutdown"
+						$shutdown = 1
+				end
+
+			end			
+			#$commandFinished << command if command.commandid != nil and command.commandid > 0
+		else
+			sleep 0.1
+		end
+		
+	end
+end
+
+$bot_hardware 		= FarmBotControlInterface.new
+$bot_control		= FarmBotControl.new
 
 $shutdown		= 0
-#$command_queue		= Queue.new
-#$command_finished	= Queue.new
+$command_queue		= Queue.new
+$command_finished	= Queue.new
+
+#botDb				= BotDbAccess.new
 
 # *thread disabled for now*
 # Main loop for the bot. Keep cycling until quiting time
 #bot_thread = Thread.new { 
 #
-#	bot = Control.new
+#	bot = FarmBotControl.new
 #	while $shutdown == 0
 #		bot.runCycle
 #	end
@@ -24,7 +72,7 @@ $shutdown		= 0
 
 # just a little menu for testing
 
-$move_size = 10
+$move_size = 100
 
 while $shutdown == 0 do
 
@@ -34,6 +82,7 @@ while $shutdown == 0 do
 	puts '[FarmBot Controller Menu]'
 	puts ''
 	puts 'p - stop'
+#	puts 'o - status'
 	puts 't - execute test file'
 	puts ''
 	puts "move size = #{$move_size}"
@@ -45,10 +94,7 @@ while $shutdown == 0 do
 	puts 'r - up'
 	puts 'f - down'
 	puts ''
-	puts 'z - home z axis'	
-	puts 'x - home x axis'	
-	puts 'c - home y axis'	
-	puts ''
+	puts 'e - home'	
 	puts 'q - step size'	
 	puts ''
 	print 'command > '
@@ -70,62 +116,32 @@ while $shutdown == 0 do
 		when "T" # Execute test file
 		
 			# read the file
-			new_command = TestFileHandler.readCommandFile
+			new_command = FarmBotTestFileHandler.readCommandFile
 			new_command.commandid = 0
 			
 			# put the command into the queue for execution
-			#$command_queue << new_command
-			$bot_conrtol.setCommand(new_command)
-		when "Z" # Move to home
+			$command_queue << new_command
+		when "E" # Move to home
 		
 			# create the command
-			new_command = ControlCommand.new
+			new_command = FarmBotControlCommand.new
 			new_command.commandid = 0
 			
 			# add lines with the right actions to the command
-			new_line = ControlCommandLine.new
-			new_line.action = "HOME Z"
+			new_line = FarmBotControlCommandLine.new
+			new_line.action = "MOVE TO HOME"
 			new_command.lines = [new_line]
 			
 			# put the command into the queue for execution
-			#$command_queue << new_command
-			$bot_control.setCommand(new_command)
-		when "X" # Move to home
-		
-			# create the command
-			new_command = ControlCommand.new
-			new_command.commandid = 0
-			
-			# add lines with the right actions to the command
-			new_line = ControlCommandLine.new
-			new_line.action = "HOME X"
-			new_command.lines = [new_line]
-			
-			# put the command into the queue for execution
-			#$command_queue << new_command
-			$bot_control.setCommand(new_command)
-		when "C" # Move to home
-		
-			# create the command
-			new_command = ControlCommand.new
-			new_command.commandid = 0
-			
-			# add lines with the right actions to the command
-			new_line = ControlCommandLine.new
-			new_line.action = "HOME Y"
-			new_command.lines = [new_line]
-			
-			# put the command into the queue for execution
-			#$command_queue << new_command
-			$bot_control.setCommand(new_command)
+			$command_queue << new_command
 		when "W" # Move forward
 		
 			# create the command
-			new_command = ControlCommand.new
+			new_command = FarmBotControlCommand.new
 			new_command.commandid = 0
 			
 			# add lines with the right actions to the command
-			new_line = ControlCommandLine.new
+			new_line = FarmBotControlCommandLine.new
 			new_line.action = "MOVE RELATIVE"
 			new_line.xCoord = 0
 			new_line.yCoord = $move_size
@@ -133,16 +149,15 @@ while $shutdown == 0 do
 			new_command.lines = [new_line]
 			
 			# put the command into the queue for execution
-			#$command_queue << new_command
-			$bot_control.setCommand(new_command)
+			$command_queue << new_command
 		when "S" # Move back
 		
 			# create the command
-			new_command = ControlCommand.new
+			new_command = FarmBotControlCommand.new
 			new_command.commandid = 0
 			
 			# add lines with the right actions to the command
-			new_line = ControlCommandLine.new
+			new_line = FarmBotControlCommandLine.new
 			new_line.action = "MOVE RELATIVE"
 			new_line.xCoord = 0
 			new_line.yCoord = -$move_size
@@ -150,16 +165,15 @@ while $shutdown == 0 do
 			new_command.lines = [new_line]
 			
 			# put the command into the queue for execution
-			#$command_queue << new_command
-			$bot_control.setCommand(new_command)
+			$command_queue << new_command
 		when "A" # Move left
 		
 			# create the command
-			new_command = ControlCommand.new
+			new_command = FarmBotControlCommand.new
 			new_command.commandid = 0
 			
 			# add lines with the right actions to the command
-			new_line = ControlCommandLine.new
+			new_line = FarmBotControlCommandLine.new
 			new_line.action = "MOVE RELATIVE"
 			new_line.xCoord = -$move_size
 			new_line.yCoord = 0
@@ -167,16 +181,15 @@ while $shutdown == 0 do
 			new_command.lines = [new_line]
 			
 			# put the command into the queue for execution
-			#$command_queue << new_command
-			$bot_control.setCommand(new_command)
+			$command_queue << new_command
 		when "D" # Move right
 		
 			# create the command
-			new_command = ControlCommand.new
+			new_command = FarmBotControlCommand.new
 			new_command.commandid = 0
 			
 			# add lines with the right actions to the command
-			new_line = ControlCommandLine.new
+			new_line = FarmBotControlCommandLine.new
 			new_line.action = "MOVE RELATIVE"
 			new_line.xCoord = $move_size
 			new_line.yCoord = 0
@@ -184,16 +197,16 @@ while $shutdown == 0 do
 			new_command.lines = [new_line]
 			
 			# put the command into the queue for execution
-			#$command_queue << new_command
-			$bot_control.setCommand(new_command)
+			$command_queue << new_command
+
 		when "R" # Move up
 		
 			# create the command
-			new_command = ControlCommand.new
+			new_command = FarmBotControlCommand.new
 			new_command.commandid = 0
 			
 			# add lines with the right actions to the command
-			new_line = ControlCommandLine.new
+			new_line = FarmBotControlCommandLine.new
 			new_line.action = "MOVE RELATIVE"
 			new_line.xCoord = 0
 			new_line.yCoord = 0
@@ -201,16 +214,15 @@ while $shutdown == 0 do
 			new_command.lines = [new_line]
 			
 			# put the command into the queue for execution
-			#$command_queue << new_command
-			$bot_control.setCommand(new_command)
+			$command_queue << new_command
 		when "F" # Move down
 		
 			# create the command
-			new_command = ControlCommand.new
+			new_command = FarmBotControlCommand.new
 			new_command.commandid = 0
 			
 			# add lines with the right actions to the command
-			new_line = ControlCommandLine.new
+			new_line = FarmBotControlCommandLine.new
 			new_line.action = "MOVE RELATIVE"
 			new_line.xCoord = 0
 			new_line.yCoord = 0
@@ -218,8 +230,8 @@ while $shutdown == 0 do
 			new_command.lines = [new_line]
 			
 			# put the command into the queue for execution
-			#$command_queue << new_command
-			$bot_control.setCommand(new_command)
+			$command_queue << new_command
+
 		end
 
 	$bot_control.runCycle
