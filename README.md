@@ -12,8 +12,11 @@ Rapsberry PI
 Update the RPi, install ruby, firmate and the arduino IDE
 
 sudo apt-get update
+
 sudo apt-get install ruby
+
 gem install firmata
+
 sudo apt-get install arduino
 
 Arduino
